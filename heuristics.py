@@ -1,4 +1,4 @@
-from typing import Dict, Callable, List, Set, Counter
+from typing import List, Set, Counter
 from collections import Counter
 import math
 
@@ -7,11 +7,19 @@ def _get_all_valid_words(word_length: int) -> Set[str]:
     Loads and returns the set of all valid words.
     """
 
-    file = str(word_length) + '_letter_words.txt'
+    file = str(word_length) + "_letter_words.txt"
     with open(file) as f:
         return set(f.read().splitlines())
 
-def _get_valid_words(word_length: int, guesses: List[str], feedback: List[List[int]]) -> Set[str]:
+def _get_valid_words(word_length: int, guesses: List[str] = None, feedback: List[List[int]] = None):
+    """
+    Loads and returns the set of all valid words.
+    """
+    if guesses is None:
+        guesses = []
+    if feedback is None:
+        feedback = []
+
     """
     Filters valid words based on past guesses and feedback.
 

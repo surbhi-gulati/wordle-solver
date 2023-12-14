@@ -1,95 +1,76 @@
-from typing import Dict, List
-from heuristics import HEURISTICS
-
+from heuristics import HEURISTICS, _get_all_valid_words
 
 class WordleSolver:
-    def __init__(self, word_length: int):
+
+    def __init__(self, word_length, heuristics):
         self.word_length = word_length
+        self.heuristics = heuristics
+        self.secret_word = None
+        self.guesses = []
+        self.feedback = []
 
-    def solve(self, heuristic: str, target_word: str) -> int:
-        """Solves the Wordle game for a given target word and heuristic."""
-        # Validate heuristic
-        if heuristic not in HEURISTICS:
-            raise ValueError(f"Invalid heuristic: {heuristic}")
+    def set_secret_word(self, secret_word):
+        self.secret_word = secret_word.lower()
 
-        # Initialize variables
-        guesses = 0
-        current_state = ""
-        feedback = {letter: None for letter in range(self.word_length)}
+    def get_valid_words(self):
+        # TODO: Implement a more efficient way to get valid words based on feedback
+        valid_words = set()
+        for word in _get_all_valid_words(self.word_length):
+            if self._is_valid_word(word):
+                valid_words.add(word)
+        return valid_words
 
-        # Loop while the solution hasn't been found
-        all_positions_updated = False
-        while current_state != target_word and not all_positions_updated:
-            # Generate next guess based on the heuristic
-            next_guess = HEURISTICS[heuristic](self.word_length, current_state, feedback)
+    def _is_valid_word(self, word):
+        # TODO: Improve efficiency by checking only applicable feedback
+        for guess, feedback in zip(self.guesses, self.feedback):
+            for i, (letter, fb_value) in enumerate(zip(guess, feedback)):
+                if fb_value == 0: # gray
+                    if letter in word:
+                        return False
+                elif fb_value == 1: # yellow
+                    if letter not in word or word[i] == letter:
+                        return False
+                elif fb_value == 2: # green
+                    if letter != word[i]:
+                        return False
+        return True
 
-            # Get feedback from the game on the guess
-            feedback = get_feedback(next_guess, target_word)
+    def solve(self, heuristic, secret_word=None):
+        if not secret_word:
+            raise ValueError("Secret word is not provided.")
+        self.set_secret_word(secret_word)
+        while len(self.guesses) < self.word_length + 1:
+            guess = self._choose_word(heuristic)
+            feedback = self._get_feedback(guess)
+            self.guesses.append(guess)
+            self.feedback.append(feedback)
+            if guess == self.secret_word:
+                break
+        if guess == self.secret_word:
+            print(f"Word solved in {len(self.guesses)} guesses using {heuristic} heuristic.")
+            return len(self.guesses)
+        else:
+            print(f"Failed to solve the word after {len(self.guesses)} guesses.")
+            return -1
 
-            # Update the internal state based on the feedback
-            current_state = update_state(current_state, next_guess, feedback)
 
-            all_positions_updated = True
-            for value in feedback.values():
-                if value is None:
-                    all_positions_updated = False
-                    break
+    def _choose_word(self, heuristic):
+        valid_words = self.get_valid_words()
+        if len(self.guesses) == 0:
+            # First guess, any valid word can be chosen
+            return valid_words.pop()
+        else:
+            # Choose word based on provided heuristic
+            return heuristic(self.word_length, self.guesses, self.feedback)
 
-            guesses += 1
-
-        if not all_positions_updated:
-            raise ValueError("Feedback dictionary is missing entries")
-
-        return guesses
-
-
-def update_state(state: str, guess: str, feedback: Dict[str, str]) -> str:
-    """Updates the internal state based on the guess and feedback."""
-
-    new_state = ""
-    for i, letter in enumerate(guess):
-        if feedback[letter] == "🟩":
-            new_state += letter
-        elif feedback[letter] == "🟨":
-            if letter not in state:
-                # Not in the word, exclude from future guesses
-                new_state += "X"
+    def _get_feedback(self, guess):
+        # Simulate feedback based on the secret word
+        feedback = []
+        for i, letter in enumerate(guess):
+            if letter == self.secret_word[i]:
+                feedback.append(2) # green
+            elif letter in self.secret_word:
+                feedback.append(1) # yellow
             else:
-                # In the word but wrong position, mark for future guesses
-                new_state += letter
-        else:
-            # Not in the word, exclude from future guesses
-            new_state += "X"
-
-    return new_state
-
-
-def validate_feedback(feedback: Dict[str, str]) -> None:
-    """Validates the feedback dictionary."""
-
-    if len(feedback) != 5:
-        raise ValueError("Feedback dictionary must have 5 entries.")
-
-    valid_values = {"🟩", "🟨", "⬛"}
-    for key, value in feedback.items():
-        if len(key) != 1 or value not in valid_values:
-            raise ValueError(f"Invalid feedback entry: {key}={value}")
-
-
-def get_feedback(guess: str, target_word: str) -> Dict[str, str]:
-    """Simulates the game and returns feedback for the guess."""
-
-    # Simulate Wordle game logic to generate feedback
-    feedback = {}
-    for i, letter in enumerate(guess):
-        if letter == target_word[i]:
-            feedback[letter] = "🟩"
-        elif letter in target_word:
-            feedback[letter] = "🟨"
-        else:
-            feedback[letter] = "⬛"
-
-    # Validate the feedback dictionary
-    validate_feedback(feedback)
-
-    return feedback
+                feedback.append(0) # gray
+        return feedback
