@@ -48,8 +48,7 @@ def _get_valid_words(word_length, guesses, feedback, used_words):
                 valid_words = {w for w in valid_words if letter not in w and w not in used_words}
     return valid_words
 
-
-# Heuristic 1: Information Gain (modified to penalize used letters)
+# Heuristic 1: Information Gain
 def information_gain_heuristic(word_length, guesses, feedback, used_words, answer):
     """
     Prioritizes words that maximize information gain based on letter frequencies, penalizing used letters.
@@ -81,7 +80,7 @@ def information_gain_heuristic(word_length, guesses, feedback, used_words, answe
             score -= 1
     return max(valid_words, key=lambda word: score)
 
-# Heuristic 2: Most Frequent Remaining Letters (modified to exclude used words)
+# Heuristic 2: Most Frequent Remaining Letters
 def frequent_letters_heuristic(word_length, guesses, feedback, used_words, answer):
     """
     Prioritizes words containing the most frequent remaining letters, excluding already used ones.
@@ -135,7 +134,6 @@ def positional_information_gain_heuristic(word_length, guesses, feedback, used_w
     return max(valid_words, key=lambda word: sum(scores[letter] for letter in word))
 
 # Heuristic 4: Double Letter Prioritization
-
 def double_letter_heuristic(word_length, guesses, feedback, used_words, answer):
     """
     Prioritizes words containing double letters, as they potentially reveal more information and eliminate possibilities.
@@ -156,9 +154,7 @@ def double_letter_heuristic(word_length, guesses, feedback, used_words, answer):
     scores = {word: double_letter_counts.get(word, 0) for word in valid_words}
     return max(valid_words, key=lambda word: scores[word])
 
-
 # Heuristic 5: Vowel Frequency
-
 def vowel_frequency_heuristic(word_length, guesses, feedback, used_words, answer):
     """
     Prioritizes words with higher vowel content, as vowels are statistically more common and informative.
@@ -204,7 +200,6 @@ def get_feedback(guess, answer):
     return feedback
 
 # Heuristic 6: Letter Coverage
-
 def letter_coverage_heuristic(word_length, guesses, feedback, used_words, answer):
     """
     Prioritizes words that cover more unique remaining letters.
@@ -250,7 +245,7 @@ def double_exclusion_heuristic(word_length, guesses, feedback, used_words, answe
     scores = {word: sum(1 for letter in word if letter in eliminated_letters) for word in valid_words}
     return max(valid_words, key=lambda word: scores[word])
 
-# Heuristic 8: Random Guesser Function (implements Hard Mode constraints)
+# Heuristic 8: Random Guesser Function (merely implements Hard Mode constraints)
 def random_guesser_function(word_length, guesses, feedback, used_words, answer):
     """
     Randomly selects a valid word from the remaining options, enforcing Hard Mode rules.
@@ -270,11 +265,11 @@ def random_guesser_function(word_length, guesses, feedback, used_words, answer):
     return random.choice(list(valid_words))
 
 HEURISTICS = {
-    "information_gain": information_gain_heuristic,
-    "frequent_letters": frequent_letters_heuristic,
-    "positional_information_gain": positional_information_gain_heuristic,
-    "double_letter": double_letter_heuristic,
-    "vowel_frequency": vowel_frequency_heuristic,
+    "information_gain_heuristic": information_gain_heuristic,
+    "frequent_letters_heuristic": frequent_letters_heuristic,
+    "positional_information_gain_heuristic": positional_information_gain_heuristic,
+    "double_letter_heuristic": double_letter_heuristic,
+    "vowel_frequency_heuristic": vowel_frequency_heuristic,
     "letter_coverage_heuristic": letter_coverage_heuristic,
     "double_exclusion_heuristic": double_exclusion_heuristic,
     "random_guesser_function": random_guesser_function,
