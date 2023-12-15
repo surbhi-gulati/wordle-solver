@@ -1,3 +1,6 @@
+from collections import Counter
+import math
+
 from heuristics import HEURISTICS, _get_all_valid_words, _get_valid_words
 
 class WordleSolver:
@@ -7,12 +10,11 @@ class WordleSolver:
         self.secret_word = None
         self.guesses = []
         self.feedback = []
+        self.used_words = set()  # New attribute to track used words
 
-    # Set the given word as the secret word for this Wordle game.
     def set_secret_word(self, secret_word):
         self.secret_word = secret_word.lower()
 
-    # Solve the given Wordle puzzle by prioritizing given heuristic.
     def solve(self, heuristic, secret_word=None):
         if not secret_word:
             raise ValueError("Secret word is not provided.")
@@ -25,26 +27,20 @@ class WordleSolver:
             if guess == self.secret_word:
                 break
             else:
-                print("BAD GUESS: " + guess)
+                print("BAD GUESS:", guess)
         if guess == self.secret_word:
-            print("GOOD GUESS: " + guess)
-            print(f"Word solved in {len(self.guesses)} guesses using {heuristic} heuristic.")
-            return len(self.guesses)
-        else:
-            print(f"Failed to solve the word after {len(self.guesses)} guesses.")
-            return -1
+            print("GOOD GUESS:", guess)
+        print(f"Word solved in {len(self.guesses)} guesses using {heuristic} heuristic.")
+        return len(self.guesses)
 
-    # Select a word guess based on the heuristic function given.
     def _choose_word(self, heuristic):
-        valid_words = _get_valid_words(self.word_length, self.guesses, self.feedback)
-        # Random anchor guess.
-        if len(self.guesses) == 0:
-            return valid_words.pop()
-        # Heuristic guess after feedback is given.
-        else:
-            return heuristic(self.word_length, self.guesses, self.feedback)
+        valid_words = _get_valid_words(self.word_length, self.guesses, self.feedback, self.used_words)
+        while True:
+            candidate_word = heuristic(self.word_length, self.guesses, self.feedback, self.used_words)
+            if candidate_word not in self.used_words:
+                self.used_words.add(candidate_word)
+                return candidate_word
 
-    # Simulate word feedback. Green = 2; Yellow = 1; Gray = 0.
     def _get_feedback(self, guess):
         feedback = []
         for i, letter in enumerate(guess):
