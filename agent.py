@@ -1,179 +1,100 @@
 from wordle_solver import WordleSolver
 from heuristics import HEURISTICS
 from random import choice
+from statistics import mean, stdev
+import argparse
 
-def choose_word_length():
-    """
-    Gets user-selected word length (5, 6, or 7).
+def choose_word_length(args):
+  """
+  Validate and return chosen word length.
+  """
+  if args.word_length not in (5, 6, 7):
+    raise ValueError(f"Invalid word length: {args.word_length}")
+  return args.word_length
 
-    Returns:
-        word_length = (5, 6, or 7).
-    """
-    while True:
-        try:
-            word_length = int(input("Choose a word length (5, 6, or 7): "))
-            if word_length in (5, 6, 7):
-                return word_length
-            print("Invalid word length. Please try again.")
-        except ValueError:
-            print("Invalid input. Please enter a number.")
+def choose_heuristic(args, heuristics):
+  """
+  Parse and validate heuristic.
+  """
+  try:
+    index = int(args.heuristic_number) - 1
+    if 0 <= index < len(heuristics):
+      return list(heuristics.values())[index]
+    else:
+      raise ValueError
+  except ValueError:
+    if args.heuristic_number not in heuristics:
+      raise ValueError(f"Invalid heuristic: {args.heuristic_number}")
+    return heuristics[args.heuristic_number]
 
-def choose_word_list(word_length):
-    """
-    Reads the corresponding word list for the requested word length.
+def analyze_single_heuristic(word_length, heuristic):
+  """
+  Run single-word analysis for a chosen heuristic.
+  """
+  word_list = load_word_list(word_length)
+  secret_word = choice(word_list)
+  solver = WordleSolver(word_length, [heuristic])
+  guesses = solver.solve(heuristic, secret_word)
+  print(f"Heuristic: {heuristic.__name__}")
+  print(f"Secret word: {secret_word}")
+  print(f"Guesses made: {guesses} / {word_length + 1}")
 
-    Args:
-        word_length: Chosen word length.
+def analyze_comparison_mode(word_length, percentage, heuristics):
+  """
+  Run comparison mode analysis for all heuristics on a chosen percentage of words.
+  """
+  word_list = load_word_list(word_length)
+  num_words = int(len(word_list) * percentage / 100)
+  for heuristic in heuristics:
+    solver = WordleSolver(word_length, [heuristic])
+    total_guesses = 0
+    heuristic_averages = {}
+    for word in word_list[:num_words]:
+      guesses = solver.solve(heuristic, word)
+      total_guesses += guesses
+      if heuristic not in heuristic_averages:
+        heuristic_averages[heuristic] = 0
+      heuristic_averages[heuristic] += guesses
+    average_guesses = total_guesses / num_words
+    min_guesses = min(heuristic_averages.values(), key=min)
+    max_guesses = max(heuristic_averages.values(), key=max)
+    std_dev = stdev(list(heuristic_averages.values()))
+    print(f"{heuristic.__name__} heuristic:")
+    print(f"- Average guesses: {average_guesses:.2f}")
+    print(f"- Minimum guesses: {min_guesses}")
+    print(f"- Maximum guesses: {max_guesses}")
+    print(f"- Standard deviation: {std_dev:.2f}")
 
-    Returns:
-        word_list: Word list of specified length.
-    """
-    with open(f"{word_length}_letter_words.txt", "r") as f:
-        word_list = f.read().splitlines()
-    return word_list
-
-def choose_heuristic_mode():
-    """
-    Prompts the user to choose a heuristic mode and validates their input.
-
-    Returns:
-        "single" if the user chooses a single heuristic,
-        "comparison" if the user chooses to compare all heuristics.
-    """
-    while True:
-        choice = input("Choose a heuristic mode: \n"
-                       "1. Single Heuristic\n"
-                       "2. Comparison Mode (All Heuristics)\n").lower()
-        if choice in ("1", "single heuristic"):
-            return "single"
-        elif choice in ("2", "comparison mode", "all heuristics"):
-            return "comparison"
-        else:
-            print("Invalid choice. Please try again.")
-
-def choose_single_heuristic(heuristics):
-    """
-    Choose a single heuristic analysis by name or number.
-
-    Args:
-        heuristics: A dictionary of available heuristics functions.
-
-    Returns:
-        Chosen heuristic function.
-    """
-    while True:
-        try:
-            heuristic_choice = input("Enter name/number of your chosen heuristic (e.g., 1, letter_frequency, etc.): ")
-            # Try to interpret choice as an integer (index)
-            if heuristic_choice.isdigit():
-                index = int(heuristic_choice) - 1
-                if 0 <= index < len(heuristics):
-                    if callable(list(heuristics.values())[index]):
-                        return list(heuristics.values())[index]
-                    else:
-                        print(f"Invalid heuristic; choose from: {', '.join(heuristics.keys())}")
-                else:
-                    print(f"Invalid heuristic; choose from: {', '.join(heuristics.keys())}")
-            # If not an integer, try to match the heuristic name
-            else:
-                if heuristic_choice in heuristics:
-                    if callable(heuristics[heuristic_choice]):
-                        return heuristics[heuristic_choice]
-                    else:
-                        print(f"Invalid heuristic; choose from: {', '.join(heuristics.keys())}")
-                else:
-                    print(f"Invalid heuristic; choose from: {', '.join(heuristics.keys())}")
-        except ValueError:
-            print("Invalid heuristic.")
-
-def choose_word_list_size():
-    """
-    Choose whether to guess 1 or many words.
-
-    Returns:
-        "single" if the user chooses a single word,
-        "multi" if the user chooses a percentage of the word list.
-    """
-    while True:
-        choice = input("Choose a word list size: \n"
-                       "1. one = randomly chosen word\n"
-                       "2. many = many (percentage)\n").lower()
-        if choice in ("1", "one"):
-            return "single"
-        elif choice in ("2", "many", "percentage"):
-            return "multi"
-        else:
-            print("Invalid choice -- try again; choose 1) Single Word or 2) Multi-word analysis.")
-
-def choose_percentage():
-    """
-    Prompts the user to enter a percentage (only used in "multi" mode).
-
-    Returns:
-        Selected percentage of word list.
-    """
-    while True:
-        try:
-            percentage = float(input("Enter percentage (1-100): "))
-            if 1 <= percentage <= 100:
-                return percentage
-            else:
-                print("Invalid percentage. Please try again.")
-        except ValueError:
-            print("Invalid input. Please enter a number.")
-
+def load_word_list(word_length):
+  """
+  Load words from the specified word length file.
+  """
+  with open(f"{word_length}_letter_words.txt", "r") as f:
+    return f.read().splitlines()
 
 def main():
-    """
-    Runs the Wordle solver based on user input settings.
+  """
+  Runs analysis based on command line arguments.
+  """
+  parser = argparse.ArgumentParser(description="Wordle Heuristic Analysis")
+  parser.add_argument("word_length", type=int, choices=[5, 6, 7], help="Length of Wordle words")
+  parser.add_argument("heuristic_number", help="Index or name of the heuristic to analyze")
+  parser.add_argument("--percent", type=float, default=50, help="Percentage of word list to analyze (default: 50%)")
+  args = parser.parse_args()
 
-    1. Get chosen word length list, "single" or "comparison" analysis & heuristic mode choice.
-    2. "single" mode: Solves based on heuristic(s) selected on a single word.
-    3. "comparison" mode: Solves based on heuristic(s) selected on a selected % of the list.
-    """
-    # Choose word length and word list
-    word_length = choose_word_length()
-    word_list = choose_word_list(word_length)
+  try:
+    word_length = choose_word_length(args)
+    heuristic = choose_heuristic(args, HEURISTICS)
 
-    # Choose heuristic mode
-    heuristic_mode = choose_heuristic_mode()
-
-    # One heuristic
-    if heuristic_mode == "single":
-        # Choose single heuristic
-        heuristic = choose_single_heuristic(HEURISTICS)
-
-        # Choose and solve a random secret word
-        secret_word = choice(word_list)
-        solver = WordleSolver(word_length, [heuristic])
-        guesses = solver.solve(heuristic, secret_word)
-    # Comparison (all heuristics)
+    if args.heuristic_number.lower() == "c":
+      # Comparison mode for all heuristics with chosen percentage
+      analyze_comparison_mode(word_length, args.percent, HEURISTICS)
     else:
-        word_list_size = choose_word_list_size()
-
-        if word_list_size == "single":
-            # Single word
-            secret_word = choice(word_list)
-            for heuristic in HEURISTICS:
-                solver = WordleSolver(word_length, [heuristic])
-                guesses = solver.solve(heuristic, secret_word)
-                print(f"{heuristic} heuristic solved the word in {guesses} guesses. (Secret word: {secret_word})")
-        else:
-            # % Word List
-            percentage = choose_percentage()
-            num_words = int(len(word_list) * percentage / 100)
-            for heuristic in HEURISTICS:
-                solver = WordleSolver(word_length, [heuristic])
-                total_guesses = 0
-                heuristic_averages = {}
-                for word in word_list[:num_words]:
-                    guesses = solver.solve(heuristic, word)
-                    total_guesses += guesses
-                    if heuristic not in heuristic_averages:
-                        heuristic_averages[heuristic] = 0
-                    heuristic_averages[heuristic] += guesses
-                average_guesses = total_guesses / num_words
-                print(f"{heuristic} heuristic averaged {average_guesses} guesses for {percentage}% of the word list.")
+      # Single-word analysis for any other heuristic
+      analyze_single_heuristic(word_length, heuristic)
+  except ValueError as e:
+    print(f"Error: {e}")
+    parser.print_usage()
 
 if __name__ == "__main__":
-    main()
+  main()

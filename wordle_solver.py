@@ -29,9 +29,9 @@ class WordleSolver:
                 print("BAD GUESS:", guess)
         # Feedback 
         if guess == self.secret_word:
-            print(f"Word solved in {len(self.guesses)} guesses using {heuristic} heuristic. (Secret word: {secret_word})")
+            print(f"SOLVED WORD!!!")
         else:
-            print(f"Failed to solve word in {len(self.guesses)} guesses using {heuristic}.")
+            print(f"FAILED!!!")
         return len(self.guesses)
 
     def _choose_word(self, heuristic):
