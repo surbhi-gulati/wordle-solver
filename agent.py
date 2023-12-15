@@ -147,7 +147,6 @@ def main():
         secret_word = choice(word_list)
         solver = WordleSolver(word_length, [heuristic])
         guesses = solver.solve(heuristic, secret_word)
-        print(f"Word solved in {guesses} guesses using {heuristic} heuristic. (Secret word: {secret_word})")
     # Comparison (all heuristics)
     else:
         word_list_size = choose_word_list_size()
