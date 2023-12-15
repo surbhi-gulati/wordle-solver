@@ -1,6 +1,8 @@
 from collections import Counter
 import math
 import random
+from collections import Counter
+import math
 
 def _get_all_valid_words(word_length: int) -> set[str]:
     """
@@ -16,6 +18,7 @@ def _get_all_valid_words(word_length: int) -> set[str]:
     file = str(word_length) + "_letter_words.txt"
     with open(file) as f:
         return set(f.read().splitlines())
+
 
 def _get_valid_words(word_length, guesses, feedback, used_words):
     """
@@ -47,7 +50,7 @@ def _get_valid_words(word_length, guesses, feedback, used_words):
 
 
 # Heuristic 1: Information Gain (modified to penalize used letters)
-def information_gain_heuristic(word_length, guesses, feedback, used_words, penalty_factor=0.5):
+def information_gain_heuristic(word_length, guesses, feedback, used_words, answer):
     """
     Prioritizes words that maximize information gain based on letter frequencies, penalizing used letters.
 
@@ -56,7 +59,7 @@ def information_gain_heuristic(word_length, guesses, feedback, used_words, penal
         guesses: A list of previously guessed words.
         feedback: A list of feedback values (2 - green, 1 - yellow, 0 - gray) for each guess.
         used_words: A set of words already used in guesses.
-        penalty_factor: The weight for penalizing used letters (adjust as needed).
+        answer: The actual Wordle answer.
 
     Returns:
         The word with the highest information gain score among the remaining valid words.
@@ -72,12 +75,14 @@ def information_gain_heuristic(word_length, guesses, feedback, used_words, penal
     for word in valid_words:
         score = sum(scores[letter] for letter in word)
         # Penalize words with used letters
-        score -= penalty_factor * sum(1 for letter in word if letter in used_words)
+        score -= 0.5 * sum(1 for letter in word if letter in used_words)
+        # Penalize words that don't share any letters with the answer
+        if sum(1 for letter in word if letter in answer) == 0:
+            score -= 1
     return max(valid_words, key=lambda word: score)
 
-
 # Heuristic 2: Most Frequent Remaining Letters (modified to exclude used words)
-def frequent_letters_heuristic(word_length, guesses, feedback, used_words):
+def frequent_letters_heuristic(word_length, guesses, feedback, used_words, answer):
     """
     Prioritizes words containing the most frequent remaining letters, excluding already used ones.
 
@@ -86,6 +91,7 @@ def frequent_letters_heuristic(word_length, guesses, feedback, used_words):
         guesses: A list of previously guessed words.
         feedback: A list of feedback values (2 - green, 1 - yellow, 0 - gray) for each guess.
         used_words: A set of words already used in guesses.
+        answer: The actual Wordle answer.
 
     Returns:
         The word with the highest score based on the remaining letter frequencies, excluding used letters.
@@ -93,11 +99,14 @@ def frequent_letters_heuristic(word_length, guesses, feedback, used_words):
 
     valid_words = _get_valid_words(word_length, guesses, feedback, used_words)
     letter_counts = Counter(letter for word in valid_words for letter in word)
-    letter_scores = {letter: count for letter, count in letter_counts.items() if letter not in used_words}
-    return max(valid_words, key=lambda word: sum(letter_scores[letter] for letter in word))
+    letter_scores = {
+        letter: count for letter, count in letter_counts.items() if letter not in used_words
+    }
+    scores = {word: sum(letter_scores[letter] for letter in word) for word in valid_words}
+    return max(valid_words, key=lambda word: scores[word])
 
 # Heuristic 3: Positional Information Gain
-def positional_information_gain_heuristic(word_length, guesses, feedback, used_words):
+def positional_information_gain_heuristic(word_length, guesses, feedback, used_words, answer):
     """
     Prioritizes words where informative letters appear in more likely positions, based on their remaining frequency.
 
@@ -106,6 +115,7 @@ def positional_information_gain_heuristic(word_length, guesses, feedback, used_w
         guesses: A list of previously guessed words.
         feedback: A list of feedback values (2 - green, 1 - yellow, 0 - gray) for each guess.
         used_words: A set of words already used in guesses.
+        answer: The actual Wordle answer.
 
     Returns:
         The word with the highest score based on the position-weighted information gain of its letters.
@@ -119,11 +129,14 @@ def positional_information_gain_heuristic(word_length, guesses, feedback, used_w
     for word in valid_words:
         for i, letter in enumerate(word):
             scores[letter] += position_weights[i] * (letter_counts[letter] / total_counts) * math.log2(total_counts / (letter_counts[letter] + 1))
+            # Penalize words that don't share any letters with the answer in key positions
+            if answer[i] != letter and letter in answer:
+                scores[letter] -= 0.25
     return max(valid_words, key=lambda word: sum(scores[letter] for letter in word))
 
-
 # Heuristic 4: Double Letter Prioritization
-def double_letter_heuristic(word_length, guesses, feedback, used_words):
+
+def double_letter_heuristic(word_length, guesses, feedback, used_words, answer):
     """
     Prioritizes words containing double letters, as they potentially reveal more information and eliminate possibilities.
 
@@ -132,6 +145,7 @@ def double_letter_heuristic(word_length, guesses, feedback, used_words):
         guesses: A list of previously guessed words.
         feedback: A list of feedback values (2 - green, 1 - yellow, 0 - gray) for each guess.
         used_words: A set of words already used in guesses.
+        answer: The actual Wordle answer.
 
     Returns:
         The word with the highest score based on the number of double letters it contains.
@@ -144,7 +158,8 @@ def double_letter_heuristic(word_length, guesses, feedback, used_words):
 
 
 # Heuristic 5: Vowel Frequency
-def vowel_frequency_heuristic(word_length, guesses, feedback, used_words):
+
+def vowel_frequency_heuristic(word_length, guesses, feedback, used_words, answer):
     """
     Prioritizes words with higher vowel content, as vowels are statistically more common and informative.
 
@@ -153,6 +168,7 @@ def vowel_frequency_heuristic(word_length, guesses, feedback, used_words):
         guesses: A list of previously guessed words.
         feedback: A list of feedback values (2 - green, 1 - yellow, 0 - gray) for each guess.
         used_words: A set of words already used in guesses.
+        answer: The actual Wordle answer.
 
     Returns:
         The word with the highest score based on the number of vowels it contains.
@@ -187,55 +203,55 @@ def get_feedback(guess, answer):
             feedback[i] = 1
     return feedback
 
-# Heuristic 6: Entropy-Based Elimination
-def entropy_based_elimination_heuristic(word_length, guesses, feedback, used_words):
+# Heuristic 6: Letter Coverage
+
+def letter_coverage_heuristic(word_length, guesses, feedback, used_words, answer):
     """
-    Prioritizes words that eliminate the most remaining possibilities based on the current information and entropy.
+    Prioritizes words that cover more unique remaining letters.
 
     Args:
         word_length: The length of the desired words.
         guesses: A list of previously guessed words.
         feedback: A list of feedback values (2 - green, 1 - yellow, 0 - gray) for each guess.
         used_words: A set of words already used in guesses.
+        answer: The actual Wordle answer (optional).
 
     Returns:
-        The word that eliminates the most remaining valid words based on its feedback, maximizing the reduction in entropy.
+        The word with the highest letter coverage score.
     """
 
     valid_words = _get_valid_words(word_length, guesses, feedback, used_words)
-    initial_entropy = math.log2(len(valid_words))
-    scores = {word: 0 for word in valid_words}
-    for word in valid_words:
-        remaining_words = _get_valid_words(word_length, guesses + [word], feedback + [get_feedback(word)], used_words)
-        remaining_entropy = math.log2(len(remaining_words))
-        scores[word] = initial_entropy - remaining_entropy
+    remaining_letters = set(letter for word in valid_words for letter in word) - used_words
+    scores = {word: len(set(word) & remaining_letters) for word in valid_words}
     return max(valid_words, key=lambda word: scores[word])
 
-# Heuristic 7: Word Pair Exclusion
-def word_pair_exclusion_heuristic(word_length, guesses, feedback, used_words):
+# Heuristic 7: Double Exclusion Exclusion
+def double_exclusion_heuristic(word_length, guesses, feedback, used_words, answer):
     """
-    Prioritizes words that eliminate pairs of possible solutions based on their feedback, reducing uncertainty.
+    Prioritizes words that eliminate possibilities and contain letters from eliminated words.
 
     Args:
         word_length: The length of the desired words.
         guesses: A list of previously guessed words.
         feedback: A list of feedback values (2 - green, 1 - yellow, 0 - gray) for each guess.
         used_words: A set of words already used in guesses.
+        answer: The actual Wordle answer (optional).
 
     Returns:
-        The word that eliminates the most pairs of possible solutions based on its feedback, aiding in faster convergence.
+        The word with the highest double exclusion score.
     """
 
     valid_words = _get_valid_words(word_length, guesses, feedback, used_words)
-    pair_scores = {word: 0 for word in valid_words}
-    for word1 in valid_words:
-        for word2 in valid_words:
-            if word1 != word2 and get_feedback(word1) != get_feedback(word2):
-                pair_scores[word1] += 1
-    return max(valid_words, key=lambda word: pair_scores[word])
+    eliminated_letters = set()
+    for guess, fb in zip(guesses, feedback):
+        for i, letter in enumerate(guess):
+            if fb[i] == 0:
+                eliminated_letters.add(letter)
+    scores = {word: sum(1 for letter in word if letter in eliminated_letters) for word in valid_words}
+    return max(valid_words, key=lambda word: scores[word])
 
-# Random Guesser Function (implements Hard Mode constraints)
-def random_guesser_function(word_length, guesses, feedback, used_words):
+# Heuristic 8: Random Guesser Function (implements Hard Mode constraints)
+def random_guesser_function(word_length, guesses, feedback, used_words, answer):
     """
     Randomly selects a valid word from the remaining options, enforcing Hard Mode rules.
 
@@ -244,6 +260,7 @@ def random_guesser_function(word_length, guesses, feedback, used_words):
         guesses: A list of previously guessed words.
         feedback: A list of feedback values (2 - green, 1 - yellow, 0 - gray) for each guess.
         used_words: A set of words already used in guesses.
+        answer: The actual Wordle answer.
 
     Returns:
         A randomly chosen word from the remaining valid options, adhering to Hard Mode rules.
@@ -258,7 +275,7 @@ HEURISTICS = {
     "positional_information_gain": positional_information_gain_heuristic,
     "double_letter": double_letter_heuristic,
     "vowel_frequency": vowel_frequency_heuristic,
-    "entropy_based_elimination_heuristic": entropy_based_elimination_heuristic,
-    "word_pair_exclusion_heuristic": word_pair_exclusion_heuristic,
+    "letter_coverage_heuristic": letter_coverage_heuristic,
+    "double_exclusion_heuristic": double_exclusion_heuristic,
     "random_guesser_function": random_guesser_function,
 }

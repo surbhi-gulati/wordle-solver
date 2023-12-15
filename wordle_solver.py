@@ -1,7 +1,5 @@
 from collections import Counter
-import math
-
-from heuristics import HEURISTICS, _get_all_valid_words, _get_valid_words
+from heuristics import _get_valid_words
 
 class WordleSolver:
     def __init__(self, word_length, heuristics):
@@ -10,7 +8,7 @@ class WordleSolver:
         self.secret_word = None
         self.guesses = []
         self.feedback = []
-        self.used_words = set()  # New attribute to track used words
+        self.used_words = set()
 
     def set_secret_word(self, secret_word):
         self.secret_word = secret_word.lower()
@@ -25,18 +23,21 @@ class WordleSolver:
             self.guesses.append(guess)
             self.feedback.append(feedback)
             if guess == self.secret_word:
+                print("GOOD GUESS:", guess)
                 break
             else:
                 print("BAD GUESS:", guess)
+        # Feedback 
         if guess == self.secret_word:
-            print("GOOD GUESS:", guess)
-        print(f"Word solved in {len(self.guesses)} guesses using {heuristic} heuristic.")
+            print(f"Word solved in {len(self.guesses)} guesses using {heuristic} heuristic.")
+        else:
+            print(f"Failed to solve word in {len(self.guesses)} guesses using {heuristic}.")
         return len(self.guesses)
 
     def _choose_word(self, heuristic):
         valid_words = _get_valid_words(self.word_length, self.guesses, self.feedback, self.used_words)
         while True:
-            candidate_word = heuristic(self.word_length, self.guesses, self.feedback, self.used_words)
+            candidate_word = heuristic(self.word_length, self.guesses, self.feedback, self.used_words, self.secret_word)
             if candidate_word not in self.used_words:
                 self.used_words.add(candidate_word)
                 return candidate_word
