@@ -1,25 +1,37 @@
-# WORDLE SOLVER AGENT
+# Wordle Heuristic Analysis
 
-## How does Wordle work?
+This script analyzes the performance of different Wordle heuristics.
+
+### But first, how does Wordle work?
 New York Times Wordle is a 5-letter word guessing game wherein players have the opportunity to take up to 6 attempts to guess a secret word from the English dictionary. For each guess, players receive hints about how correct their guess is, broken down by letter. Correctly placed letters are green, correct letters in invalid indices within a word are yellow, and letters that are fully excluded in the secret word are grayed. The goal is to get all greens which means each letter matches that of the SECRET_WORD.
 
 Advanced variants might have different versions. For the scope of this project we are also including 6 and 7 letter word options with letter_count + 1 number of attempted guesses in line with another Wordle inspired website: MoreWordle.
 
-## Run instructions
-To run the Wordle Solver Agent:
-1. Install the zip of the `agent.py` code and accepted 5-7 letter word lists
-2. Run `agent.py` with command: `python agent.py`
-3. Follow the given instructions to choose to run all heuristics (Comparison mode) or a single heuristic on either a single word or a selected percentage of words from your list of words. Your word list will the list of 5, 6, or 7 letter words from the English dictionary.
+### 2 Modes
 
-##### [COMPARISON MODE]
-Comparison mode runs every heuristic on the chosen secret word or word list rather than on a single heuristic.
+Our script operates in 1 of 2 modes.
 
-##### [DEMO] Single instance mode: 
-Runs Wordle solver with a single word from the desired word length list, using the given heuristic. 
+* Single-word analysis: Applies a chosen heuristic on a single secret word.
+* Comparison mode: Analyzes the performance of all heuristics on a chosen percentage of words from the word list.
 
-Demonstrates guesswork process for the single word and states number of guesses needed.
+### Usage
 
-##### [INSIGHTS] Multi instance mode:
-Runs Wordle solver randomly on the given percentage of the desired word length list, using the given heuristic. 
+python agent.py WORD_LENGTH (--heuristic [HEURISTIC_NUMBER] | --comparison [PERCENT])
 
-Counts the average number of guesses needed per heuristic and their fail rate to complete guesswork within word length + 1 attempts.
+#### Arguments:
+
+WORD_LENGTH: Length of Wordle words (5, 6, or 7)
+--heuristic: Flag to run a single option from the heuristics dictionary (optional)
+[HEURISTIC_NUMBER]: Index or name of the heuristic to analyze (1-8) (used only with --heuristic)
+--comparison: Flag to run comparison mode for all heuristics (optional)
+[PERCENT]: Percentage of word list to analyze (default 50%) (used only with --comparison)
+
+While the heuristic and comparison flags are mutually exclusive it is required to have one of them.
+
+#### Example usages:
+
+##### Analyze single-word performance of the second heuristic on 5-letter words:
+python agent.py 5 --heuristic 2
+
+##### Run comparison mode on 6-letter words with 75% of the word list:
+python agent.py 6 --comparison 75
