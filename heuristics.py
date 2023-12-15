@@ -13,49 +13,44 @@ def _get_all_valid_words(word_length: int) -> Set[str]:
 
 def _get_valid_words(word_length: int, guesses: List[str] = None, feedback: List[List[int]] = None):
     """
-    Loads and returns the set of all valid words.
+    Filters valid words based on past guesses and feedback.
+
+    Args:
+        word_length: The length of the word to guess.
+        guesses: (Optional) List of past guesses.
+        feedback: (Optional) List of feedback for each guess.
+
+    Returns:
+        A set of valid words that are consistent with the provided information.
     """
     if guesses is None:
         guesses = []
     if feedback is None:
         feedback = []
 
-    """
-    Filters valid words based on past guesses and feedback.
-
-    Args:
-        guesses: The list of past guesses.
-        feedback: The list of feedback for each guess.
-
-    Returns:
-        A set of valid words that are consistent with the provided information.
-    """
-
     valid_words = set(_get_all_valid_words(word_length))
-    # Filter out words that are not consistent with the feedback
+    # Exclude words containing any letters already used in guesses
+    for guess in guesses:
+        valid_words -= set(guess)
+    # Filter out remaining words based on feedback (green and gray)
     for guess, fb in zip(guesses, feedback):
         for i, (letter, fb_value) in enumerate(zip(guess, fb)):
-            if fb_value == 0:  # gray: letter not in word
-                valid_words = {word for word in valid_words if letter not in word}
-            elif fb_value == 2:  # green: letter in correct position
+            if fb_value == 2:  # Green: letter in correct position
                 valid_words = {word for word in valid_words if word[i] == letter}
-                
     return valid_words
 
 def _letter_frequency(word_length: int, guesses: List[str], feedback: List[List[int]]):
     """
-    Heuristic based on letter frequency in the dictionary.
+    Heuristic based on letter frequency, excluding used letters.
     """
-
-    # Count letter occurrences
+    # Count letter occurrences, excluding used letters
     letter_counts = Counter()
     for word in guesses:
-        letter_counts.update(word)
+        letter_counts.update(set(word) - set(guess for guess in guesses))
 
-    # Prioritize words with most frequent letters
+    # Prioritize words with most frequent unused letters
     valid_words = _get_valid_words(word_length, guesses, feedback)
     return max(valid_words, key=lambda word: sum(letter_counts[letter] for letter in word))
-
 
 def _letter_position_information(word_length: int, guesses: List[str], feedback: List[List[int]]):
     """
@@ -109,7 +104,6 @@ def _word_entropy(word_length: int, guesses: List[str], feedback: List[List[int]
     # Return the word with the highest entropy
     return max(entropies.items(), key=lambda item: item[1])[0]
 
-
 def _maximize_elimination(word_length: int, guesses: List[str], feedback: List[List[int]]):
     """
     Heuristic that maximizes the number of words eliminated per guess.
@@ -123,7 +117,6 @@ def _maximize_elimination(word_length: int, guesses: List[str], feedback: List[L
 
     # Return the word that eliminates the most words
     return max(elimination_counts.items(), key=lambda item: item[1])[0]
-
 
 def _fulfill_known_positions(word_length: int, guesses: List[str], feedback: List[List[int]]):
     """
@@ -155,7 +148,6 @@ def _fulfill_known_positions(word_length: int, guesses: List[str], feedback: Lis
         scored_words.append((score, word))
 
     return max(scored_words, key=lambda x: x[0])[1]
-
 
 def _consider_remaining_letters(word_length: int, guesses: List[str], feedback: List[List[int]]):
     """
@@ -189,7 +181,8 @@ def _minimize_invalid_combinations(word_length: int, guesses: List[str], feedbac
     for i, guess in enumerate(guesses):
         for j, letter in enumerate(guess):
             if feedback[i][j] == 0:  # gray: letter not in word
-                for other_letter in word[i + 1:]:
+                other_letters = guess[j + 1:]
+                for other_letter in other_letters:
                     invalid_combinations.add((letter, other_letter))
 
     # Prioritize words that avoid invalid combinations

@@ -1,7 +1,6 @@
-from heuristics import HEURISTICS, _get_all_valid_words
+from heuristics import HEURISTICS, _get_all_valid_words, _get_valid_words
 
 class WordleSolver:
-
     def __init__(self, word_length, heuristics):
         self.word_length = word_length
         self.heuristics = heuristics
@@ -9,32 +8,11 @@ class WordleSolver:
         self.guesses = []
         self.feedback = []
 
+    # Set the given word as the secret word for this Wordle game.
     def set_secret_word(self, secret_word):
         self.secret_word = secret_word.lower()
 
-    def get_valid_words(self):
-        # TODO: Implement a more efficient way to get valid words based on feedback
-        valid_words = set()
-        for word in _get_all_valid_words(self.word_length):
-            if self._is_valid_word(word):
-                valid_words.add(word)
-        return valid_words
-
-    def _is_valid_word(self, word):
-        # TODO: Improve efficiency by checking only applicable feedback
-        for guess, feedback in zip(self.guesses, self.feedback):
-            for i, (letter, fb_value) in enumerate(zip(guess, feedback)):
-                if fb_value == 0: # gray
-                    if letter in word:
-                        return False
-                elif fb_value == 1: # yellow
-                    if letter not in word or word[i] == letter:
-                        return False
-                elif fb_value == 2: # green
-                    if letter != word[i]:
-                        return False
-        return True
-
+    # Solve the given Wordle puzzle by prioritizing given heuristic.
     def solve(self, heuristic, secret_word=None):
         if not secret_word:
             raise ValueError("Secret word is not provided.")
@@ -46,31 +24,34 @@ class WordleSolver:
             self.feedback.append(feedback)
             if guess == self.secret_word:
                 break
+            else:
+                print("BAD GUESS: " + guess)
         if guess == self.secret_word:
+            print("GOOD GUESS: " + guess)
             print(f"Word solved in {len(self.guesses)} guesses using {heuristic} heuristic.")
             return len(self.guesses)
         else:
             print(f"Failed to solve the word after {len(self.guesses)} guesses.")
             return -1
 
-
+    # Select a word guess based on the heuristic function given.
     def _choose_word(self, heuristic):
-        valid_words = self.get_valid_words()
+        valid_words = _get_valid_words(self.word_length, self.guesses, self.feedback)
+        # Random anchor guess.
         if len(self.guesses) == 0:
-            # First guess, any valid word can be chosen
             return valid_words.pop()
+        # Heuristic guess after feedback is given.
         else:
-            # Choose word based on provided heuristic
             return heuristic(self.word_length, self.guesses, self.feedback)
 
+    # Simulate word feedback. Green = 2; Yellow = 1; Gray = 0.
     def _get_feedback(self, guess):
-        # Simulate feedback based on the secret word
         feedback = []
         for i, letter in enumerate(guess):
             if letter == self.secret_word[i]:
-                feedback.append(2) # green
+                feedback.append(2)
             elif letter in self.secret_word:
-                feedback.append(1) # yellow
+                feedback.append(1)
             else:
-                feedback.append(0) # gray
+                feedback.append(0)
         return feedback
