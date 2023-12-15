@@ -1,8 +1,6 @@
 from collections import Counter
 import math
 import random
-from collections import Counter
-import math
 
 def _get_all_valid_words(word_length: int) -> set[str]:
     """
@@ -14,11 +12,9 @@ def _get_all_valid_words(word_length: int) -> set[str]:
     Returns:
         A set containing all valid words of the given length.
     """
-
     file = str(word_length) + "_letter_words.txt"
     with open(file) as f:
         return set(f.read().splitlines())
-
 
 def _get_valid_words(word_length, guesses, feedback, used_words):
     """
